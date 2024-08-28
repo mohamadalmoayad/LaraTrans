@@ -38,7 +38,7 @@ trait HasTranslations
     {
         $locale = $locale ?: App::getLocale();
         $translation = $this->localeTranslation($locale)->where('property_name', $property)->first();
-        return $translation ? $translation->value : null;
+        return $translation?->value;
     }
 
     public function setTranslation(string $property, string $value, string $locale = null): void
