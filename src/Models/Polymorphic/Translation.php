@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class Translation extends Model
 {
     use HasFactory;
+    protected $table = "laratrans_translations";
     protected $fillable = ['locale', 'property_name', 'value', 'translatable_id', 'translatable_type'];
     public function translatable(): MorphTo
     {

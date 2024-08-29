@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('translations', function (Blueprint $table) {
+        Schema::create('laratrans_translations', function (Blueprint $table) {
             $table->id();
             $table->morphs('translatable');
             $table->string('property_name');
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('translations');
+        Schema::dropIfExists('laratrans_translations');
     }
 };
