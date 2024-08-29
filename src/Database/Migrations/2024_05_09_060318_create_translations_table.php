@@ -18,6 +18,9 @@ return new class extends Migration
             $table->string('locale');
             $table->string('value');
             $table->timestamps();
+
+            // Indexes for translatable_type and translatable_id
+            $table->index(['translatable_type', 'translatable_id']);
         });
     }
 
