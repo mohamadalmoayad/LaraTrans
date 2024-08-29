@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -20,7 +19,10 @@ return new class extends Migration
             $table->timestamps();
 
             // Indexes for translatable_type and translatable_id
-            $table->index(['translatable_type', 'translatable_id']);
+            // Check if the index already exists before adding it
+            if (!Schema::hasIndex('translations', 'translations_translatable_type_translatable_id_index')) {
+                $table->index(['translatable_type', 'translatable_id'], 'translations_translatable_type_translatable_id_index');
+            }
         });
     }
 
