@@ -1,7 +1,7 @@
 {
     "name": "almoayad/laratrans",
     "description": "LaraTrans is a Laravel package that simplifies the process of handling translations for your models. It allows you to easily create, update, and delete translations for specific model properties, making your application ready for multilingual support with minimal effort.",
-    "version": "1.0.4",
+    "version": "1.1.0",
     "type": "library",
     "license": "MIT",
     "autoload": {
@@ -17,7 +17,7 @@
     ],
     "require": {
         "php": "^7.4 || ^8.0",
-        "illuminate/support": "^8.0 || ^9.0 || ^10.0"
+        "illuminate/support": "^8.0 || ^9.0 || ^10.0 || ^11.0"
     },
     "extra": {
         "laravel": {
