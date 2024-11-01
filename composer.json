@@ -1,29 +1,29 @@
 {
-    "name": "almoayad/laratrans",
-    "description": "LaraTrans is a Laravel package that simplifies the process of handling translations for your models. It allows you to easily create, update, and delete translations for specific model properties, making your application ready for multilingual support with minimal effort.",
-    "version": "1.1.0",
-    "type": "library",
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Almoayad\\LaraTrans\\": "src/"
-        }
-    },
-    "authors": [
-        {
-            "name": "Mohamad Almoayad",
-            "email": "mohamadalmoayad@gmail.com"
-        }
-    ],
-    "require": {
-        "php": "^7.4 || ^8.0",
-        "illuminate/support": "^8.0 || ^9.0 || ^10.0 || ^11.0"
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Almoayad\\LaraTrans\\LaraTransServiceProvider"
-            ]
-        }
+  "name": "almoayad/laratrans",
+  "description": "LaraTrans is a Laravel package that simplifies the process of handling translations for your models. It allows you to easily create, update, and delete translations for specific model properties, making your application ready for multilingual support with minimal effort.",
+  "version": "2.0.0",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Almoayad\\LaraTrans\\": "src/"
     }
+  },
+  "authors": [
+    {
+      "name": "Mohamad Almoayad",
+      "email": "mohamadalmoayad@gmail.com"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "illuminate/support": "^8.0 || ^9.0 || ^10.0 || ^11.0"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Almoayad\\LaraTrans\\LaraTransServiceProvider"
+      ]
+    }
+  }
 }
