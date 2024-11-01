@@ -4,12 +4,27 @@ namespace Almoayad\LaraTrans\Traits;
 
 use Almoayad\LaraTrans\Models\Polymorphic\Translation;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Almoayad\LaraTrans\Validation\TranslationValidator;
 use Illuminate\Support\Facades\App;
 
 trait HasTranslations
 {
+    protected ?TranslationValidator $validator = null;
+
     protected static function bootHasTranslations()
     {
+        static::creating(function ($model) {
+            if (request()->has('translations')) {
+                $model->validateTranslations(request()->input());
+            }
+        });
+
+        static::updating(function ($model) {
+            if (request()->has('translations')) {
+                $model->validateTranslations(request()->input());
+            }
+        });
+
         static::created(function ($model) {
             $model->createTranslations();
         });
@@ -21,6 +36,19 @@ trait HasTranslations
         static::deleting(function ($model) {
             $model->deleteTranslations();
         });
+    }
+
+    protected function getValidator(): TranslationValidator
+    {
+        if (!$this->validator) {
+            $this->validator = new TranslationValidator();
+        }
+        return $this->validator;
+    }
+
+    protected function validateTranslations(array $data): void
+    {
+        $this->getValidator()->validate($data);
     }
 
     public function translations(): MorphMany
@@ -38,12 +66,32 @@ trait HasTranslations
     {
         $locale = $locale ?: App::getLocale();
         $translation = $this->localeTranslation($locale)->where('property_name', $property)->first();
+
+        if (!$translation && config('laratrans.locales.auto_fallback', true)) {
+            $fallbackLocale = config('laratrans.locales.fallback_locale');
+            $translation = $this->localeTranslation($fallbackLocale)
+                ->where('property_name', $property)
+                ->first();
+        }
+
         return $translation?->value;
     }
 
     public function setTranslation(string $property, string $value, string $locale = null): void
     {
         $locale = $locale ?: App::getLocale();
+
+        // Validate single translation
+        $this->validateTranslations([
+            'translations' => [
+                [
+                    'locale' => $locale,
+                    'property_name' => $property,
+                    'value' => $value,
+                ]
+            ]
+        ]);
+
         $this->translations()->updateOrCreate(
             ['translatable_id' => $this->id, 'property_name' => $property, 'locale' => $locale],
             ['value' => $value]
