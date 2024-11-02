@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('laratrans_translations', function (Blueprint $table) {
+        Schema::create(config('laratrans.table_name', 'LaraTrans_translations'), function (Blueprint $table) {
             $table->id();
             $table->morphs('translatable');
             $table->string('property_name');
@@ -31,6 +31,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('laratrans_translations');
+        Schema::dropIfExists(config('laratrans.table_name', 'LaraTrans_translations'));
     }
 };
