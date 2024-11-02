@@ -22,23 +22,11 @@ class LaraTransServiceProvider extends ServiceProvider
             __DIR__ . '/Config/laratrans.php' => config_path('laratrans.php'),
         ], 'config');
 
-        // Publish migration
+        // Publish migration after config
         $this->publishes([
-            __DIR__ . '/Database/Migrations/create_LaraTrans_translations_table.php' => $this->getMigrationFileName(),
-            ,
+            __DIR__ . '/Database/Migrations/create_laratrans_translations_table.php' =>
+                $this->getMigrationFileName(),
         ], 'migrations');
-
-        // Publish config
-        $this->publishes([
-            __DIR__ . '/Config/laratrans.php' => config_path('laratrans.php'),
-        ], 'config');
-
-        // Merge config
-        $this->mergeConfigFrom(
-            __DIR__ . '/Config/laratrans.php',
-            'laratrans'
-        );
-
     }
 
     /**
