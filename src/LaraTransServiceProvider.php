@@ -10,7 +10,7 @@ class LaraTransServiceProvider extends ServiceProvider
     {
         // Publish migration
         $this->publishes([
-            __DIR__.'/Database/Migrations/create_LaraTrans_translations_table.php' => database_path('migrations/'.date('Y_m_d_His').'_create_LaraTrans_translations_table.php'),
+            __DIR__ . '/Database/Migrations/create_LaraTrans_translations_table.php' => database_path('migrations/' . date('Y_m_d_His') . '_create_' . config('laratrans.table_name', 'LaraTrans_translations') . '_table.php'),
         ], 'migrations');
 
         // Publish config
