@@ -10,19 +10,27 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create(config('laratrans.table_name', 'LaraTrans_translations'), function (Blueprint $table) {
+        $tableName = config('laratrans.table_name', 'laratrans_translations');
+
+        Schema::create($tableName, function (Blueprint $table) {
             $table->id();
             $table->morphs('translatable');
             $table->string('property_name');
             $table->string('locale');
-            $table->string('value');
+            $table->text('value');  // Changed from string to text for longer translations
             $table->timestamps();
 
-            // Indexes for translatable_type and translatable_id
-            // Check if the index already exists before adding it
-            if (!Schema::hasIndex('translations', 'translations_translatable_type_translatable_id_index')) {
-                $table->index(['translatable_type', 'translatable_id'], 'translations_translatable_type_translatable_id_index');
-            }
+            // Create a unique compound index to prevent duplicate translations
+            $table->unique(
+                ['translatable_type', 'translatable_id', 'property_name', 'locale'],
+                'unique_translation'
+            );
+
+            // Index for faster queries when filtering by locale
+            $table->index('locale');
+
+            // Index for property name searches
+            $table->index('property_name');
         });
     }
 
@@ -31,6 +39,7 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists(config('laratrans.table_name', 'LaraTrans_translations'));
+        $tableName = config('laratrans.table_name', 'laratrans_translations');
+        Schema::dropIfExists($tableName);
     }
 };
