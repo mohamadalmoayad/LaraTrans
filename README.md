@@ -1,4 +1,4 @@
-<p align="center"><a href="https://www.modesigns.studio" target="_blank"><img src="https://www.modesigns.studio/_next/image?url=%2Fimages%2Flogo%2Fmo-designs-logo.gif&w=256&q=75" width="250" alt="Mo Designs Studio Logo"></a></p>
+<p align="center"><a href="https://www.modesignsstudio.com" target="_blank"><img src="https://www.modesignsstudio.com/_next/image?url=%2Fimages%2Flogo%2Fmo-designs-logo.gif&w=256&q=75" width="250" alt="Mo Designs Studio Logo"></a></p>
 
 # LaraTrans
 
@@ -330,4 +330,4 @@ If you have any feedback or suggestions, feel free to open an issue or submit a 
 
 ---
 
-This package is maintained with pride by [Mo Designs Studio](https://www.modesigns.studio).
+This package is maintained with pride by [Mo Designs Studio](https://www.modesignsstudio.com).
