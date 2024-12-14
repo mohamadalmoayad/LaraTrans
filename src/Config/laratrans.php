@@ -6,7 +6,11 @@ return [
     | Default Settings
     |--------------------------------------------------------------------------
     */
-    'table_name' => 'laratrans_translations',
+    'storage' => [
+        'mode' => 'single_table',   // 'single_table' or 'dedicated_tables'
+        'table_prefix' => 'trans_',
+        'table_name' => 'laratrans_translations',
+    ],
 
     /*
     |--------------------------------------------------------------------------
