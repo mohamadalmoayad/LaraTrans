@@ -37,6 +37,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Models Configuration
+    |--------------------------------------------------------------------------
+    */
+    'models' => [
+        'translation' => \Almoayad\LaraTrans\Models\Translation::class,
+        'dedicated_translation' => \Almoayad\LaraTrans\Models\DedicatedTranslation::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Validation Rules
     |--------------------------------------------------------------------------
     */
