@@ -4,34 +4,37 @@ namespace Almoayad\LaraTrans\Validation;
 
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Almoayad\LaraTrans\Models\BaseTranslation;
 
 class TranslationValidator
 {
     protected array $rules;
     protected array $messages;
+    protected BaseTranslation $translationModel;
 
     public function __construct()
     {
+        $this->initializeTranslationModel();
         $this->initializeRules();
         $this->initializeMessages();
+    }
+
+    protected function initializeTranslationModel(): void
+    {
+        $modelClass = config('laratrans.storage.mode') === 'single_table'
+            ? config('laratrans.models.translation')
+            : config('laratrans.models.dedicated_translation');
+
+        $this->translationModel = new $modelClass;
     }
 
     protected function initializeRules(): void
     {
         $this->rules = [
             'translations' => 'array',
-            'translations.*.locale' => [
-                'required',
-                'string',
-                'in:' . implode(',', config('laratrans.locales.supported')),
-            ],
-            'translations.*.property_name' => 'required|string',
-            'translations.*.value' => [
-                'required',
-                'string',
-                'min:' . config('laratrans.validation.default_rules.min', 1),
-                'max:' . config('laratrans.validation.default_rules.max', 255),
-            ],
+            'translations.*.locale' => $this->translationModel->rules()['locale'],
+            'translations.*.property_name' => $this->translationModel->rules()['property_name'],
+            'translations.*.value' => $this->translationModel->rules()['value'],
         ];
     }
 
@@ -77,7 +80,7 @@ class TranslationValidator
     {
         $propertyRules = config('laratrans.validation.properties', []);
 
-        foreach ($data['translations'] ?? [] as $index => $translation) {
+        foreach ($data['translations'] ?? [] as $translation) {
             $property = $translation['property_name'] ?? null;
             if (!$property || !isset($propertyRules[$property])) {
                 continue;
@@ -85,12 +88,13 @@ class TranslationValidator
 
             $rules = $propertyRules[$property];
             $validator = Validator::make($translation, [
-                'value' => [
-                    'required',
-                    'string',
-                    'min:' . ($rules['min'] ?? config('laratrans.validation.default_rules.min')),
-                    'max:' . ($rules['max'] ?? config('laratrans.validation.default_rules.max')),
-                ],
+                'value' => array_merge(
+                    $this->translationModel->rules()['value'],
+                    [
+                        'min:' . ($rules['min'] ?? config('laratrans.validation.default_rules.min')),
+                        'max:' . ($rules['max'] ?? config('laratrans.validation.default_rules.max')),
+                    ]
+                ),
             ]);
 
             if ($validator->fails()) {
