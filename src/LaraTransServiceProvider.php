@@ -23,22 +23,39 @@ class LaraTransServiceProvider extends ServiceProvider
         ], 'config');
 
         // Publish migration after config
-        $this->publishes([
-            __DIR__ . '/Database/Migrations/create_laratrans_translations_table.php' =>
-                $this->getMigrationFileName(),
-        ], 'migrations');
+        $this->registerMigrations();
+        $this->registerCommands();
     }
 
-    /**
-     * Returns the migration file name with timestamp
-     */
-    protected function getMigrationFileName(): string
+    protected function registerMigrations(): void
     {
-        $timestamp = date('Y_m_d_His');
-        $tableName = config('laratrans.table_name', 'laratrans_translations');
+        if ($this->shouldUseSingleTable()) {
+            $timestamp = date('Y_m_d_His');
+            $tableName = config('laratrans.table_name', 'laratrans_translations');
+            $name = $timestamp . '_' . $tableName;
+            $this->publishes([
+                __DIR__ . '/Database/Migrations/create_laratrans_translations_table.php' =>
+                    $this->getMigrationFileName($name),
+            ], 'laratrans-migrations');
+        }
+    }
 
-        return database_path(
-            "migrations/{$timestamp}_create_{$tableName}_table.php"
-        );
+    protected function registerCommands(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CreateTranslationTableCommand::class,
+            ]);
+        }
+    }
+
+    protected function shouldUseSingleTable(): bool
+    {
+        return config('laratrans.storage.mode', 'single_table') === 'single_table';
+    }
+
+    protected function getMigrationFileName(string $name): string
+    {
+        return database_path("migrations/{$name}.php");
     }
 }
