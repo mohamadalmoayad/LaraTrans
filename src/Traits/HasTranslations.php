@@ -2,9 +2,11 @@
 
 namespace Almoayad\LaraTrans\Traits;
 
- use Almoayad\LaraTrans\Support\TranslationStrategyFactory;
+use Almoayad\LaraTrans\Models\Translation;
+use Almoayad\LaraTrans\Support\TranslationStrategyFactory;
 use Almoayad\LaraTrans\Strategies\TranslationStrategy;
 use Almoayad\LaraTrans\Validation\TranslationValidator;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\App;
 
 trait HasTranslations
@@ -46,9 +48,21 @@ trait HasTranslations
         return $this->validator ??= new TranslationValidator();
     }
 
-    public function translations()
+    public function translations(): MorphMany
     {
-        return $this->getStrategy()->getTranslationsQuery();
+        return $this->morphMany(Translation::class, 'translatable');
+    }
+
+    public function translationsTable()
+    {
+        $tableName = config('laratrans.storage.table_prefix', 'trans_') .
+            $this->getTable() .
+            '_translations';
+
+        return $this->hasMany(
+            config('laratrans.models.dedicated_translation'),
+            'model_id'
+        )->where('table', $tableName);
     }
 
     public function filterTranslation(string $property, string $locale = null): ?string
@@ -84,7 +98,28 @@ trait HasTranslations
     protected function createTranslations(): void
     {
         if (request()->has('translations')) {
-            $this->getStrategy()->createTranslations(request()->input('translations'));
+            try {
+                // Validate translations first
+                $this->validateTranslations(request()->all());
+                // Get validated data and ensure required fields
+                $translations = collect(request()->input('translations'))
+                    ->map(function ($translation) {
+                        return [
+                            'locale' => $translation['locale'],
+                            'property_name' => $translation['property_name'],
+                            'value' => $translation['value'],
+                            'translatable_id' => $this->id,
+                            'translatable_type' => get_class($this)
+                        ];
+                    })
+                    ->toArray();
+
+                $this->getStrategy()->createTranslations(request()->input('translations'));
+            } catch (\Exception $e) {
+                throw new \RuntimeException(
+                    "Failed to create translations: " . $e->getMessage()
+                );
+            }
         }
     }
 

@@ -33,8 +33,7 @@ class DedicatedTableStrategy extends TranslationStrategy
 
     public function getTranslationsQuery(string $locale = null)
     {
-        $query = $this->model->translationsTable()
-            ->where('model_id', $this->model->getKey());
+        $query = $this->model->translationsTable();
         return $locale ? $query->where('locale', $locale) : $query;
     }
 
