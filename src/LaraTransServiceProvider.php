@@ -39,7 +39,7 @@ class LaraTransServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__ . '/Database/Migrations/create_laratrans_translations_table.php' =>
                     $this->getMigrationFileName($name),
-            ], 'laratrans-migrations');
+            ], 'migrations');
         }
     }
 
