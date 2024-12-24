@@ -2,6 +2,9 @@
 
 namespace Almoayad\LaraTrans;
 
+use Almoayad\LaraTrans\Commands\CreateTranslationTableCommand;
+use Almoayad\LaraTrans\Commands\MigrateTranslationStrategyCommand;
+use Almoayad\LaraTrans\Commands\CleanupTranslationsCommand;
 use Illuminate\Support\ServiceProvider;
 
 class LaraTransServiceProvider extends ServiceProvider
@@ -45,6 +48,8 @@ class LaraTransServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 CreateTranslationTableCommand::class,
+                MigrateTranslationStrategyCommand::class,
+                CleanupTranslationsCommand::class
             ]);
         }
     }
