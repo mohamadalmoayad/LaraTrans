@@ -53,18 +53,6 @@ trait HasTranslations
         return $this->morphMany(Translation::class, 'translatable');
     }
 
-    public function translationsTable()
-    {
-        $tableName = config('laratrans.storage.table_prefix', 'trans_') .
-            $this->getTable() .
-            '_translations';
-
-        return $this->hasMany(
-            config('laratrans.models.dedicated_translation'),
-            'model_id'
-        )->where('table', $tableName);
-    }
-
     public function filterTranslation(string $property, string $locale = null): ?string
     {
         $locale = $locale ?: App::getLocale();
@@ -76,6 +64,14 @@ trait HasTranslations
         }
 
         return $translation;
+    }
+
+    /**
+     * Alias method for backward compatibility (plural)
+     */
+    public function filterTranslations(string $property, string $locale = null): ?string
+    {
+        return $this->filterTranslation($property, $locale);
     }
 
     public function setTranslation(string $property, string $value, string $locale = null): void
@@ -114,7 +110,7 @@ trait HasTranslations
                     })
                     ->toArray();
 
-                $this->getStrategy()->createTranslations(request()->input('translations'));
+                $this->getStrategy()->createTranslations($translations);
             } catch (\Exception $e) {
                 throw new \RuntimeException(
                     "Failed to create translations: " . $e->getMessage()
