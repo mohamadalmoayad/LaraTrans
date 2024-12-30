@@ -22,7 +22,6 @@ class DedicatedTableStrategy extends TranslationStrategy
 
     public function setTranslation(string $property, string $value, string $locale): void
     {
-
         $this->getTranslationModel()->updateOrInsert(
             [
                 'model_id' => $this->model->getKey(),
@@ -39,7 +38,6 @@ class DedicatedTableStrategy extends TranslationStrategy
 
     public function deleteTranslations(): void
     {
-
         $this->getTranslationModel()
             ->where('model_id', $this->model->getKey())
             ->delete();
@@ -47,7 +45,6 @@ class DedicatedTableStrategy extends TranslationStrategy
 
     public function getTranslationsQuery(string $locale = null)
     {
-
         $query = $this->getTranslationModel()
             ->where('model_id', $this->model->getKey());
 
@@ -56,7 +53,6 @@ class DedicatedTableStrategy extends TranslationStrategy
 
     public function createTranslations(array $translations): void
     {
-
         $mappedTranslations = collect($translations)->map(function ($translation) {
             return array_merge($translation, ['model_id' => $this->model->getKey()]);
         })->toArray();

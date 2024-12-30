@@ -22,25 +22,41 @@ trait HasTranslations
             }
         });
 
-        static::updating(function ($model) {
-            if (request()->has('translations')) {
-                $model->validateTranslations(request()->input());
-                $model->updateTranslations();
-            }
-        });
-
         static::created(function ($model) {
             $model->createTranslations();
+        });
+
+        static::updating(function ($model) {
+            if (request()->has('translations')) {
+                $model->validateTranslations(request()->input(), false);
+                $model->updateTranslations();
+            }
         });
 
         static::deleting(function ($model) {
             $model->deleteTranslations();
         });
+
+        // Add debug logging
+        \Log::debug('Model events registered', [
+            'class' => static::class,
+            'translations' => request()->input('translations')
+        ]);
     }
 
     protected function getStrategy(): TranslationStrategy
     {
         return $this->translationStrategy ??= TranslationStrategyFactory::make($this);
+    }
+
+    public function getTranslationStrategy(): TranslationStrategy
+    {
+        return $this->getStrategy();
+    }
+
+    public function checkTranslationExists(string $property, string $locale): bool
+    {
+        return $this->getTranslationStrategy()->getTranslation($property, $locale) !== null;
     }
 
     protected function getValidator(): TranslationValidator
@@ -86,7 +102,7 @@ trait HasTranslations
                     'value' => $value,
                 ]
             ]
-        ]);
+        ], false);
 
         $this->getStrategy()->setTranslation($property, $value, $locale);
     }
@@ -137,8 +153,10 @@ trait HasTranslations
         $this->getStrategy()->deleteTranslations();
     }
 
-    protected function validateTranslations(array $data): void
+    protected function validateTranslations(array $data, bool $validateUnique = true): void
     {
-        $this->getValidator()->validate($data);
+        $this->getValidator()
+            ->setModel($this)
+            ->validate($data, $validateUnique);
     }
 }

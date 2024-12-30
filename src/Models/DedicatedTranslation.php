@@ -7,31 +7,25 @@ use Illuminate\Database\Eloquent\Model;
 class DedicatedTranslation extends BaseTranslation
 {
     protected ?Model $parentModel = null;
-    protected bool $validationOnly = false;
 
     public function __construct(array $attributes = [], ?Model $parentModel = null)
     {
         parent::__construct($attributes);
-        
         $this->parentModel = $parentModel;
-        if (!$parentModel) {
-            $this->validationOnly = true;
-        }
-        
-        if (!$this->validationOnly) {
+        if ($parentModel) {
             $this->table = $this->getTranslationTableName();
         }
     }
 
     protected function getTranslationTableName(): string
     {
-        if ($this->validationOnly) {
-            return config('laratrans.storage.table_name', 'laratrans_translations');
+        if (!$this->parentModel) {
+            throw new \RuntimeException('Parent model required for table operations');
         }
 
-        return config('laratrans.storage.table_prefix', 'trans_') . 
-               $this->parentModel->getTable() . 
-               '_translations';
+        return config('laratrans.storage.table_prefix', 'trans_') .
+            $this->parentModel->getTable() .
+            '_translations';
     }
 
     public static function getModelTableName(Model $model): string

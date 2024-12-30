@@ -2,21 +2,39 @@
 
 namespace Almoayad\LaraTrans\Validation;
 
+use Almoayad\LaraTrans\Validation\Concerns\ValidatesUniqueTranslations;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Almoayad\LaraTrans\Models\BaseTranslation;
+use Almoayad\LaraTrans\Traits\HasTranslations;
+use Illuminate\Database\Eloquent\Model;
 
 class TranslationValidator
 {
+    use ValidatesUniqueTranslations;
+
     protected array $rules;
     protected array $messages;
     protected BaseTranslation $translationModel;
+    protected ?Model $model = null;
 
     public function __construct()
     {
         $this->initializeTranslationModel();
         $this->initializeRules();
         $this->initializeMessages();
+    }
+    
+    public function setModel(Model $model): self
+    {
+        if (!in_array(HasTranslations::class, class_uses_recursive($model))) {
+            throw new \InvalidArgumentException(
+                'Model must use HasTranslations trait'
+            );
+        }
+
+        $this->model = $model;
+        return $this;
     }
 
     protected function initializeTranslationModel(): void
@@ -47,7 +65,7 @@ class TranslationValidator
         ];
     }
 
-    public function validate(array $data): void
+    public function validate(array $data, bool $validateUnique = true): void
     {
         $validator = Validator::make($data, $this->rules, $this->messages);
 
@@ -55,12 +73,21 @@ class TranslationValidator
             throw new ValidationException($validator);
         }
 
+        if ($validateUnique)
+            $this->validateUniqueTranslations($data);
         $this->validateRequiredLocales($data);
         $this->validatePropertySpecificRules($data);
     }
 
     protected function validateRequiredLocales(array $data): void
     {
+        $translations = $data['translations'] ?? [];
+        $isSingleTranslation = count($translations) === 1;
+
+        // Skip required locales check for single translation operations
+        if ($isSingleTranslation) {
+            return;
+        }
         $requiredLocales = config('laratrans.validation.default_rules.required_locales', []);
         if (empty($requiredLocales)) {
             return;
@@ -68,7 +95,6 @@ class TranslationValidator
 
         $providedLocales = collect($data['translations'] ?? [])->pluck('locale')->unique()->toArray();
         $missingLocales = array_diff($requiredLocales, $providedLocales);
-
         if (!empty($missingLocales)) {
             throw ValidationException::withMessages([
                 'translations' => ['Missing required translations for locales: ' . implode(', ', $missingLocales)],
