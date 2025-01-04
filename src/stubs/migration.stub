@@ -16,8 +16,8 @@ return new class extends Migration
             $table->text('value');
             $table->timestamps();
 
-            $table->unique(['model_id', 'property_name', 'locale']);
-            $table->index(['locale', 'property_name']);
+            $table->unique(['model_id', 'property_name', 'locale'], 'trans_unique_idx');
+            $table->index(['locale', 'property_name'], 'trans_locale_prop_idx');
         });
     }
 
