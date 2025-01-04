@@ -2,6 +2,8 @@
 
 namespace Almoayad\LaraTrans\Strategies;
 
+use Almoayad\LaraTrans\Models\DedicatedTranslation;
+
 class DedicatedTableStrategy extends TranslationStrategy
 {
     protected function getTranslationModel(): DedicatedTranslation
