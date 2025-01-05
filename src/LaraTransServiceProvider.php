@@ -24,7 +24,7 @@ class LaraTransServiceProvider extends ServiceProvider
 
         // Publish migration after config
         $this->publishes([
-            __DIR__ . '/Database/Migrations/create_laratrans_translations_table.php' =>
+            __DIR__ . '/Database/Migrations/create_LaraTrans_translations_table' =>
                 $this->getMigrationFileName(),
         ], 'migrations');
     }
