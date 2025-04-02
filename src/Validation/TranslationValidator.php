@@ -24,7 +24,7 @@ class TranslationValidator
         $this->initializeRules();
         $this->initializeMessages();
     }
-    
+
     public function setModel(Model $model): self
     {
         if (!in_array(HasTranslations::class, class_uses_recursive($model))) {
@@ -73,9 +73,12 @@ class TranslationValidator
             throw new ValidationException($validator);
         }
 
-        if ($validateUnique)
+        if ($validateUnique) {
             $this->validateUniqueTranslations($data);
+        }
+
         $this->validateRequiredLocales($data);
+        $this->validatePropertyRequiredLocales($data);
         $this->validatePropertySpecificRules($data);
     }
 
@@ -88,13 +91,15 @@ class TranslationValidator
         if ($isSingleTranslation) {
             return;
         }
+
         $requiredLocales = config('laratrans.validation.default_rules.required_locales', []);
         if (empty($requiredLocales)) {
             return;
         }
 
-        $providedLocales = collect($data['translations'] ?? [])->pluck('locale')->unique()->toArray();
+        $providedLocales = collect($translations)->pluck('locale')->unique()->toArray();
         $missingLocales = array_diff($requiredLocales, $providedLocales);
+
         if (!empty($missingLocales)) {
             throw ValidationException::withMessages([
                 'translations' => ['Missing required translations for locales: ' . implode(', ', $missingLocales)],
@@ -102,11 +107,46 @@ class TranslationValidator
         }
     }
 
+    protected function validatePropertyRequiredLocales(array $data): void
+    {
+        $translations = $data['translations'] ?? [];
+        $isSingleTranslation = count($translations) === 1;
+
+        // Skip property required locales check for single translation operations
+        if ($isSingleTranslation) {
+            return;
+        }
+
+        $errors = [];
+        $groupedData = collect($translations)->groupBy('property_name')->toArray();
+
+        foreach ($groupedData as $property => $propertyTranslations) {
+            $requiredLocales = config("laratrans.validation.properties.$property.required_locales", []);
+            if (empty($requiredLocales)) {
+                continue;
+            }
+
+            $locales = collect($propertyTranslations)->pluck('locale')->unique()->toArray();
+            $missingLocales = array_diff($requiredLocales, $locales);
+
+            if (!empty($missingLocales)) {
+                $errors[] = "Missing required translations for property '{$property}' in locales: " . implode(', ', $missingLocales);
+            }
+        }
+
+        if (!empty($errors)) {
+            throw ValidationException::withMessages([
+                'translations' => $errors
+            ]);
+        }
+    }
+
     protected function validatePropertySpecificRules(array $data): void
     {
         $propertyRules = config('laratrans.validation.properties', []);
+        $errors = [];
 
-        foreach ($data['translations'] ?? [] as $translation) {
+        foreach ($data['translations'] ?? [] as $index => $translation) {
             $property = $translation['property_name'] ?? null;
             if (!$property || !isset($propertyRules[$property])) {
                 continue;
@@ -124,8 +164,12 @@ class TranslationValidator
             ]);
 
             if ($validator->fails()) {
-                throw new ValidationException($validator);
+                $errors["translations.$index.value"] = $validator->errors()->first('value');
             }
+        }
+
+        if (!empty($errors)) {
+            throw ValidationException::withMessages($errors);
         }
     }
 }
