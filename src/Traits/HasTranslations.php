@@ -2,24 +2,21 @@
 
 namespace Almoayad\LaraTrans\Traits;
 
-use Almoayad\LaraTrans\Models\Polymorphic\Translation;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Almoayad\LaraTrans\Models\Translation;
+use Almoayad\LaraTrans\Support\TranslationStrategyFactory;
+use Almoayad\LaraTrans\Strategies\TranslationStrategy;
 use Almoayad\LaraTrans\Validation\TranslationValidator;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\App;
 
 trait HasTranslations
 {
     protected ?TranslationValidator $validator = null;
+    protected ?TranslationStrategy $translationStrategy = null;
 
     protected static function bootHasTranslations()
     {
         static::creating(function ($model) {
-            if (request()->has('translations')) {
-                $model->validateTranslations(request()->input());
-            }
-        });
-
-        static::updating(function ($model) {
             if (request()->has('translations')) {
                 $model->validateTranslations(request()->input());
             }
@@ -30,25 +27,41 @@ trait HasTranslations
         });
 
         static::updating(function ($model) {
-            $model->updateTranslations();
+            if (request()->has('translations')) {
+                $model->validateTranslations(request()->input(), false);
+                $model->updateTranslations();
+            }
         });
 
         static::deleting(function ($model) {
             $model->deleteTranslations();
         });
+
+        // Add debug logging
+        \Log::debug('Model events registered', [
+            'class' => static::class,
+            'translations' => request()->input('translations')
+        ]);
+    }
+
+    protected function getStrategy(): TranslationStrategy
+    {
+        return $this->translationStrategy ??= TranslationStrategyFactory::make($this);
+    }
+
+    public function getTranslationStrategy(): TranslationStrategy
+    {
+        return $this->getStrategy();
+    }
+
+    public function checkTranslationExists(string $property, string $locale): bool
+    {
+        return $this->getTranslationStrategy()->getTranslation($property, $locale) !== null;
     }
 
     protected function getValidator(): TranslationValidator
     {
-        if (!$this->validator) {
-            $this->validator = new TranslationValidator();
-        }
-        return $this->validator;
-    }
-
-    protected function validateTranslations(array $data): void
-    {
-        $this->getValidator()->validate($data);
+        return $this->validator ??= new TranslationValidator();
     }
 
     public function translations(): MorphMany
@@ -56,32 +69,31 @@ trait HasTranslations
         return $this->morphMany(Translation::class, 'translatable');
     }
 
-    public function localeTranslation(string $locale = null): MorphMany
-    {
-        $locale = $locale ?: App::getLocale();
-        return $this->morphMany(Translation::class, 'translatable')->where('locale', $locale);
-    }
-
     public function filterTranslation(string $property, string $locale = null): ?string
     {
         $locale = $locale ?: App::getLocale();
-        $translation = $this->localeTranslation($locale)->where('property_name', $property)->first();
+        $translation = $this->getStrategy()->getTranslation($property, $locale);
 
         if (!$translation && config('laratrans.locales.auto_fallback', true)) {
             $fallbackLocale = config('laratrans.locales.fallback_locale');
-            $translation = $this->localeTranslation($fallbackLocale)
-                ->where('property_name', $property)
-                ->first();
+            $translation = $this->getStrategy()->getTranslation($property, $fallbackLocale);
         }
 
-        return $translation?->value;
+        return $translation;
+    }
+
+    /**
+     * Alias method for backward compatibility (plural)
+     */
+    public function filterTranslations(string $property, string $locale = null): ?string
+    {
+        return $this->filterTranslation($property, $locale);
     }
 
     public function setTranslation(string $property, string $value, string $locale = null): void
     {
         $locale = $locale ?: App::getLocale();
 
-        // Validate single translation
         $this->validateTranslations([
             'translations' => [
                 [
@@ -90,18 +102,36 @@ trait HasTranslations
                     'value' => $value,
                 ]
             ]
-        ]);
+        ], false);
 
-        $this->translations()->updateOrCreate(
-            ['translatable_id' => $this->id, 'property_name' => $property, 'locale' => $locale],
-            ['value' => $value]
-        );
+        $this->getStrategy()->setTranslation($property, $value, $locale);
     }
 
     protected function createTranslations(): void
     {
         if (request()->has('translations')) {
-            $this->translations()->createMany(request()->input('translations'));
+            try {
+                // Validate translations first
+                $this->validateTranslations(request()->all());
+                // Get validated data and ensure required fields
+                $translations = collect(request()->input('translations'))
+                    ->map(function ($translation) {
+                        return [
+                            'locale' => $translation['locale'],
+                            'property_name' => $translation['property_name'],
+                            'value' => $translation['value'],
+                            'translatable_id' => $this->id,
+                            'translatable_type' => get_class($this)
+                        ];
+                    })
+                    ->toArray();
+
+                $this->getStrategy()->createTranslations($translations);
+            } catch (\Exception $e) {
+                throw new \RuntimeException(
+                    "Failed to create translations: " . $e->getMessage()
+                );
+            }
         }
     }
 
@@ -109,36 +139,24 @@ trait HasTranslations
     {
         if (request()->has('translations')) {
             foreach (request()->input('translations') as $translation) {
-                $this->setTranslation($translation['property_name'], $translation['value'], $translation['locale']);
+                $this->setTranslation(
+                    $translation['property_name'],
+                    $translation['value'],
+                    $translation['locale']
+                );
             }
         }
     }
 
     protected function deleteTranslations(): void
     {
-        $this->translations()->delete();
+        $this->getStrategy()->deleteTranslations();
     }
 
-    public function scopeWithTranslation($query, $property, $locale = null)
+    protected function validateTranslations(array $data, bool $validateUnique = true): void
     {
-        $locale = $locale ?: App::getLocale();
-        return $query->addSelect([
-            'translation' => Translation::select('value')
-                ->whereColumn('translatable_id', $this->getTable() . '.id')
-                ->where('translatable_type', get_class($this))
-                ->where('property_name', $property)
-                ->where('locale', $locale)
-                ->limit(1)
-        ])->withCasts(['translation' => 'string']);
-    }
-
-    public function scopeWhereTranslation($query, $property, $value, $locale = null)
-    {
-        $locale = $locale ?: App::getLocale();
-        return $query->whereHas('translations', function ($q) use ($property, $value, $locale) {
-            $q->where('property_name', $property)
-                ->where('locale', $locale)
-                ->where('value', 'like', "%$value%");
-        });
+        $this->getValidator()
+            ->setModel($this)
+            ->validate($data, $validateUnique);
     }
 }

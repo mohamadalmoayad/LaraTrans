@@ -6,7 +6,11 @@ return [
     | Default Settings
     |--------------------------------------------------------------------------
     */
-    'table_name' => 'laratrans_translations',
+    'storage' => [
+        'mode' => 'single_table',   // 'single_table' or 'dedicated_tables'
+        'table_prefix' => 'trans_',  // Prefix for dedicated translation tables
+        'table_name' => 'laratrans_translations', // Single table name (used in single_table mode)
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -29,6 +33,19 @@ return [
         'supported' => ['en', 'es', 'fr', 'ar'], // Add your supported locales
         'fallback_locale' => 'en',
         'auto_fallback' => true, // Whether to automatically fall back to default locale
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Models Configuration
+    |--------------------------------------------------------------------------
+    */
+    'models' => [
+        // Model class for single table translations
+        'translation' => \Almoayad\LaraTrans\Models\Translation::class,
+
+        // Base model for dedicated table translations
+        'dedicated_translation' => \Almoayad\LaraTrans\Models\DedicatedTranslation::class,
     ],
 
     /*

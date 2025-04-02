@@ -4,17 +4,26 @@
 
 **LaraTrans** is a Laravel package that simplifies the process of handling translations for your models. It allows you to easily create, update, and delete translations for specific model properties, making your application ready for multilingual support with minimal effort.
 
-## Version 2.0 Updates
+## Version 3.0 Updates
+- **Multiple Storage Strategies**  
+  - Single table mode (default)  
+  - Dedicated tables mode for better organization and performance
+- **Migration System**  
+  - Easily switch between storage strategies  
+  - Migrate existing translations between strategies  
+  - Clean up unused translation tables
+- **Enhanced Validation**  
+  - Property-specific validation rules  
+  - Required locales per property  
+  - Unique translation validation
+- **Improved API**  
+  - Strategy-based architecture  
+  - Better performance and reliability  
+  - Extended translation methods
 - Added support for Laravel 11
-- Added robust validation system
-- Added comprehensive configuration options
-- Added automatic locale fallback support
-- Added validation rules for translations
-- Added support for property-specific validation rules
-- Improved performance and reliability
 
 ## Requirements
-- PHP 8.2 or higher
+- PHP 8.2 or higher  
 - Laravel 8.0 or higher (including Laravel 11)
 
 ## Installation
@@ -44,14 +53,21 @@ After publishing the configuration file, you can customize various aspects of La
 
 ```php
 return [
-    'table_name' => 'laratrans_translations',
+    // Storage strategies
+    'storage' => [
+        'mode' => 'single_table', // or 'dedicated_tables'
+        'table_prefix' => 'trans_',
+        'table_name' => 'laratrans_translations',
+    ],
     
+    // Caching
     'cache' => [
         'enabled' => true,
         'duration' => 3600, // 1 hour
         'prefix' => 'laratrans_',
     ],
 
+    // Locales
     'locales' => [
         'default' => 'en',
         'supported' => ['en', 'es', 'fr', 'ar'],
@@ -59,18 +75,25 @@ return [
         'auto_fallback' => true,
     ],
 
+    // Models
+    'models' => [
+        'translation' => \Almoayad\LaraTrans\Models\Translation::class,
+        'dedicated_translation' => \Almoayad\LaraTrans\Models\DedicatedTranslation::class,
+    ],
+
+    // Validation
     'validation' => [
         'default_rules' => [
             'min' => 1,
             'max' => 255,
-            'required_locales' => [],
+            'required_locales' => [], // Locales that must have translations
         ],
         'properties' => [
-            'title' => [
-                'min' => 3,
-                'max' => 100,
-                'required_locales' => ['en', 'es']
-            ],
+            // 'title' => [
+            //     'min' => 3,
+            //     'max' => 100,
+            //     'required_locales' => ['en', 'es']
+            // ],
         ],
     ],
 ];
@@ -96,15 +119,19 @@ class SomeModel extends Model
 You can create translations in several ways:
 
 ```php
-// Method 1: Bulk creation
+// Method 1: Bulk creation via request
+$model = SomeModel::create($request->all()); // Automatically handles 'translations' array in request
+
+// Method 2: Bulk creation directly
 $model = SomeModel::create($request->except('translations'));
 $translations = [
     ['locale' => 'ar', 'property_name' => 'name', 'value' => 'أسود'],
     ['locale' => 'en', 'property_name' => 'name', 'value' => 'black'],
     ['locale' => 'fr', 'property_name' => 'name', 'value' => 'noir'],
 ];
+$model->updateModelTranslations($translations);
 
-// Method 2: Individual creation
+// Method 3: Individual creation
 $model->setTranslation('name', 'black', 'en');
 ```
 
@@ -119,6 +146,9 @@ $translation = $model->filterTranslation('name', 'fr');
 
 // Get all translations for current locale
 $translations = $model->localeTranslation()->get();
+
+// Check if translation exists
+$exists = $model->checkTranslationExists('name', 'en');
 ```
 
 ### Step 4: Query with Translations
@@ -128,6 +158,93 @@ $translations = $model->localeTranslation()->get();
 $models = SomeModel::withTranslation('name')
     ->whereTranslation('name', 'black')
     ->get();
+```
+
+## Storage Strategies
+
+### Single Table Mode (default)
+All translations are stored in one table with polymorphic relationships.  
+- Good for applications with fewer models needing translation  
+- Simple setup and migration  
+- Uses the standard `laratrans_translations` table
+
+### Dedicated Tables Mode
+Each model has its own translation table for better performance and organization.  
+- Better for applications with many translatable models  
+- Improved query performance  
+- Better database organization  
+- Creates tables like `trans_products_translations`, `trans_categories_translations`, etc.
+
+### Switching Storage Strategies
+
+```bash
+# Switch from single table to dedicated tables
+php artisan laratrans:migrate-strategy
+
+# Switch from dedicated tables to single table
+php artisan laratrans:migrate-strategy --reverse
+
+# Clean up old tables after migration (optional)
+php artisan laratrans:cleanup --single
+php artisan laratrans:cleanup --dedicated
+```
+
+### Creating Dedicated Translation Tables
+
+```bash
+# Create a dedicated translation table for a model
+php artisan laratrans:table Product
+```
+
+## Validation
+
+LaraTrans includes a robust validation system:
+
+### Global Validation Rules
+
+```php
+'validation' => [
+    'default_rules' => [
+        'min' => 1,
+        'max' => 255,
+        'required_locales' => ['en'], // All translations must have English
+    ],
+],
+```
+
+### Property-Specific Rules
+
+```php
+'properties' => [
+    'title' => [
+        'min' => 3,
+        'max' => 100,
+        'required_locales' => ['en', 'es'] // Title must have English and Spanish
+    ],
+    'description' => [
+        'min' => 10,
+        'max' => 1000
+    ],
+],
+```
+
+### Validation in Practice
+
+```php
+// Validation happens automatically
+try {
+    $model->setTranslation('title', 'Too short', 'en');
+} catch (ValidationException $e) {
+    // Handle validation error
+}
+
+// Bulk translations are also validated
+$model->create([
+    'translations' => [
+        ['locale' => 'en', 'property_name' => 'title', 'value' => 'Valid title'],
+        ['locale' => 'es', 'property_name' => 'title', 'value' => 'Título válido']
+    ]
+]);
 ```
 
 ## Caching
@@ -177,106 +294,6 @@ The cache is automatically invalidated in the following scenarios:
 - When the cache duration expires
 - When bulk updating translations
 
-### Cache Keys Structure
-
-Cache keys are automatically generated using the following format:
-```
-{prefix}_{table}_{model_id}_{locale}_{property}
-```
-
-For example:
-```
-laratrans_products_1_en_title
-```
-
-### Performance Considerations
-
-- First access: Performs database query and caches result
-- Subsequent accesses: Returns cached value without database query
-- Memory usage: One cache entry per translation
-- Recommended for:
-  - Frequently accessed translations
-  - Static content that rarely changes
-  - High-traffic applications
-
-### Cache Driver Compatibility
-
-TranslationCache works with any Laravel-supported cache driver:
-- Redis (recommended for production)
-- Memcached
-- File
-- Database
-- Array (useful for testing)
-
-### Best Practices
-
-1. **Selective Usage:**
-   ```php
-   // Use getCachedTranslation for frequently accessed content
-   $product->getCachedTranslation('name');
-   
-   // Use filterTranslation for rarely accessed content
-   $product->filterTranslation('internal_note');
-   ```
-
-2. **Batch Operations:**
-   ```php
-   // Efficient - single cache operation
-   $model->setTranslation('title', 'New Title', 'en');
-   
-   // Less efficient - multiple cache operations
-   foreach($titles as $locale => $title) {
-       $model->setTranslation('title', $title, $locale);
-   }
-   ```
-
-3. **Cache Duration:**
-   - Set shorter durations for frequently updated content
-   - Set longer durations for static content
-   ```php
-   // In config/laratrans.php
-   'cache' => [
-       'duration' => [
-           'static_content' => 86400, // 24 hours
-           'dynamic_content' => 3600, // 1 hour
-       ],
-   ],
-   ```
-
-### Debugging Cache
-
-1. Check if a translation is cached:
-```php
-$cacheKey = "laratrans_{$model->getTable()}_{$model->id}_en_title";
-$exists = Cache::has($cacheKey);
-```
-
-2. Clear all translations cache:
-```php
-Cache::tags('laratrans')->flush();
-```
-
-## Validation
-
-LaraTrans now includes built-in validation:
-
-```php
-// Validation will be automatic based on your config
-try {
-    $model->setTranslation('title', 'Too short', 'en');
-} catch (ValidationException $e) {
-    // Handle validation error
-}
-
-// Bulk translations are also validated
-$model->create([
-    'translations' => [
-        ['locale' => 'en', 'property_name' => 'title', 'value' => 'Valid title'],
-        ['locale' => 'es', 'property_name' => 'title', 'value' => 'Título válido']
-    ]
-]);
-```
-
 ## Automatic Features
 
 LaraTrans automatically:
@@ -285,6 +302,7 @@ LaraTrans automatically:
 - Updates translations during model updates
 - Deletes translations when the model is deleted
 - Falls back to the default locale when a translation is missing (configurable)
+- Handles migrations between storage strategies
 
 ## Customization
 
@@ -293,10 +311,9 @@ You can customize LaraTrans by:
 - Modifying the configuration file
 - Creating custom validation rules
 - Adjusting the migration file
+- Creating dedicated translation tables for specific models
 
 ## Testing the Package Locally
-
-To test the package in a local Laravel application:
 
 1. Add to your Laravel application's `composer.json`:
 ```json
@@ -307,7 +324,6 @@ To test the package in a local Laravel application:
     }
 ],
 ```
-
 2. Then run:
 ```bash
 composer require almoayad/laratrans
@@ -323,6 +339,7 @@ If you have any feedback or suggestions, feel free to open an issue or submit a 
 
 ## Version History
 
+- 3.0.0: Added storage strategies, migration system, enhanced validation, and Laravel 11 support
 - 2.0.0: Added Laravel 11 support, validation system, and configuration options
 - 1.0.4: Initial release with basic translation functionality
 
